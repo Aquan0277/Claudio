@@ -1,0 +1,14 @@
+.env
+.DS_Store
+.run/
+logs/
+state.json
+cache/
+!cache/.gitkeep
+node_modules/
+ncm-server/node_modules/
+.claude/
+user/*
+!user/.gitkeep
+!user/*.example.md
+!user/*.example.json
