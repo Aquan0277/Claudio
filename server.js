@@ -7,7 +7,7 @@ const path = require('path');
 const fs = require('fs');
 
 const broadcast = require('./src/broadcast');
-const { handle } = require('./src/router');
+const { handle, handleSync } = require('./src/router');
 const player = require('./src/player');
 const state = require('./src/state');
 const scheduler = require('./src/scheduler');
@@ -114,6 +114,19 @@ app.post('/api/chat', async (req, res) => {
   handle(message, 'user').catch(err => {
     console.error('[API] chat error:', err.message);
   });
+});
+
+// POST /api/chat-sync — serverless-friendly chat response
+app.post('/api/chat-sync', async (req, res) => {
+  const { message } = req.body;
+  if (!message) return res.status(400).json({ error: 'message required' });
+
+  try {
+    const result = await handleSync(message, 'user');
+    res.json({ ok: true, ...result });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
 });
 
 // POST /api/play-now — trigger immediate playback

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ai-radio-v4';
+const CACHE_NAME = 'ai-radio-v5';
 const STATIC_ASSETS = ['/', '/css/style.css', '/js/app.js'];
 
 self.addEventListener('install', (e) => {

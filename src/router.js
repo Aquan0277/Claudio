@@ -86,4 +86,28 @@ async function handle(input, triggerType = 'user') {
   }
 }
 
-module.exports = { handle };
+async function handleSync(input, triggerType = 'user') {
+  console.log(`[Router] Handling sync: "${input}" (${triggerType})`);
+
+  if (triggerType === 'user') {
+    state.addMessage('user', input);
+  }
+
+  try {
+    const { systemPrompt } = await assembleContext(input);
+    const userMessage = triggerType === 'scheduled'
+      ? input
+      : `听众说：${input}`;
+
+    const result = await askClaude(systemPrompt, userMessage);
+    if (result.say) {
+      state.addMessage('assistant', result.say);
+    }
+    return result;
+  } catch (err) {
+    console.error('[Router] sync error:', err.message);
+    return await buildFallbackResult(input);
+  }
+}
+
+module.exports = { handle, handleSync };

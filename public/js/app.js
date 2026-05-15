@@ -9,6 +9,7 @@
     wsTimer: null,
     currentFile: 'taste.md',
     ttsPlaying: false,
+    httpMode: location.hostname.endsWith('.vercel.app') || new URLSearchParams(location.search).has('web'),
   };
 
   // ── DOM ──
@@ -114,6 +115,12 @@
 
   // ═══════════════════════ WEBSOCKET ═══════════════════════
   function connectWS() {
+    if (S.httpMode) {
+      $('footerStatus').textContent = 'WEB MODE';
+      $('chatLive').textContent = 'HTTP';
+      return;
+    }
+
     const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
     S.ws = new WebSocket(`${proto}//${location.host}`);
 
@@ -128,6 +135,7 @@
     };
 
     S.ws.onclose = () => {
+      if (S.httpMode) return;
       $('footerStatus').textContent = 'RECONNECTING';
       S.wsTimer = setTimeout(connectWS, 3000);
     };
@@ -591,6 +599,31 @@
 
   async function sendChat(message) {
     try {
+      if (S.httpMode) {
+        addThinkingMsg();
+        const res = await fetch('/api/chat-sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message })
+        });
+        const data = await res.json();
+        removeThinking();
+
+        if (!res.ok || data.error) {
+          addSystemMsg('DJ 暂时无法回复：' + (data.error || res.status));
+          return;
+        }
+
+        if (data.play && data.play.length > 0) {
+          addDJMessageWithSongs(data.say || '我给你挑了几首。', data.play);
+        } else if (data.say) {
+          addDJMessage(data.say);
+        } else {
+          addSystemMsg('DJ 没有返回内容');
+        }
+        return;
+      }
+
       await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
