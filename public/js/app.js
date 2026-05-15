@@ -912,6 +912,17 @@
   connectWS();
 
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js').catch(() => {});
+    if (S.httpMode) {
+      navigator.serviceWorker.getRegistrations()
+        .then(regs => Promise.all(regs.map(reg => reg.unregister())))
+        .catch(() => {});
+      if ('caches' in window) {
+        caches.keys()
+          .then(keys => Promise.all(keys.map(key => caches.delete(key))))
+          .catch(() => {});
+      }
+    } else {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
   }
 })();

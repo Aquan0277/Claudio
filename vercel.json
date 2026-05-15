@@ -13,5 +13,13 @@
     { "src": "/manifest.json", "dest": "/public/manifest.json" },
     { "src": "/sw.js", "dest": "/public/sw.js" },
     { "src": "/(.*)", "dest": "/public/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store, max-age=0" }
+      ]
+    }
   ]
 }
