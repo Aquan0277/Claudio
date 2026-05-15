@@ -1,16 +1,5 @@
 require('dotenv').config({ override: true });
 
-// Auto-start NeteaseCloudMusicApi
-try {
-  const { serveNcmApi } = require('./ncm-server/node_modules/NeteaseCloudMusicApi');
-  const ncmPort = parseInt(new URL(process.env.NCM_API || 'http://localhost:3001').port) || 3001;
-  serveNcmApi({ port: ncmPort, host: '127.0.0.1' });
-  console.log(`[NCM] 网易云音乐 API 启动: http://localhost:${ncmPort}`);
-} catch (err) {
-  console.warn('[NCM] 网易云音乐 API 启动失败，请手动运行: npm run ncm');
-  console.warn('[NCM]', err.message);
-}
-
 const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
@@ -32,6 +21,22 @@ const wss = new WebSocket.Server({ server });
 
 // Init broadcast
 broadcast.init(wss);
+
+function startBundledNcmApi() {
+  // Vercel/serverless cannot bind a second long-running local port. In that
+  // environment NCM_API must point to an external NeteaseCloudMusicApi service.
+  if (process.env.VERCEL) return;
+
+  try {
+    const { serveNcmApi } = require('./ncm-server/node_modules/NeteaseCloudMusicApi');
+    const ncmPort = parseInt(new URL(process.env.NCM_API || 'http://localhost:3001').port) || 3001;
+    serveNcmApi({ port: ncmPort, host: '127.0.0.1' });
+    console.log(`[NCM] 网易云音乐 API 启动: http://localhost:${ncmPort}`);
+  } catch (err) {
+    console.warn('[NCM] 网易云音乐 API 启动失败，请手动运行: npm run ncm');
+    console.warn('[NCM]', err.message);
+  }
+}
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
@@ -223,22 +228,33 @@ app.get('/api/ncm/qr/check', async (req, res) => {
 
 // ─── Start ───────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 8080;
-server.listen(PORT, () => {
-  console.log(`\n🎵 AI 电台启动成功！`);
-  console.log(`   本地访问: http://localhost:${PORT}`);
-  console.log(`   PWA 安装: 在浏览器中打开后点击安装按钮\n`);
 
-  // Login to NCM if credentials provided
-  ncm.login().then(ok => {
-    if (ok) {
-      console.log('[NCM] 网易云账号已连接，音乐画像已激活');
-      warmNcmTaste().catch(err => {
-        console.error('[Context] 网易云画像预热失败:', err.message);
-      });
-    }
+function startLocalServer() {
+  startBundledNcmApi();
+
+  server.listen(PORT, () => {
+    console.log(`\n🎵 AI 电台启动成功！`);
+    console.log(`   本地访问: http://localhost:${PORT}`);
+    console.log(`   PWA 安装: 在浏览器中打开后点击安装按钮\n`);
+
+    // Login to NCM if credentials provided
+    ncm.login().then(ok => {
+      if (ok) {
+        console.log('[NCM] 网易云账号已连接，音乐画像已激活');
+        warmNcmTaste().catch(err => {
+          console.error('[Context] 网易云画像预热失败:', err.message);
+        });
+      }
+    });
+
+    // Start scheduler
+    scheduler.start();
+    console.log('[Scheduler] Time-based triggers active\n');
   });
+}
 
-  // Start scheduler
-  scheduler.start();
-  console.log('[Scheduler] Time-based triggers active\n');
-});
+if (require.main === module) {
+  startLocalServer();
+}
+
+module.exports = app;

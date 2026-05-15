@@ -63,3 +63,16 @@ user/ncm-profile-cache.json
 ```
 
 The app uses this file first, then refreshes NetEase data in the background. This keeps DJ responses fast while still updating your listening profile.
+
+## Vercel
+
+This repository includes a `vercel.json` so the static web UI can deploy on Vercel without invoking the local long-running server entrypoint.
+
+Important limitation: the full Claudio radio experience is designed for a persistent Node process. Vercel serverless functions do not provide long-lived WebSockets, local background schedulers, persistent file writes, or a bundled sidecar NetEaseCloudMusicApi port. For the complete experience, run Claudio locally or deploy the Node service to a long-running host such as a VPS, Railway, Render, or Fly.io.
+
+On Vercel, use it mainly as a static frontend unless you also provide:
+
+- an external `NCM_API` service
+- environment variables for AI/TTS/weather APIs
+- a persistent storage layer for user cookies, listening profile cache, and state
+- a realtime layer or polling replacement for WebSocket updates
